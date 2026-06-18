@@ -1,0 +1,182 @@
+version: '3.8'
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: afrijob-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${DB_NAME:-bddiane_sp}
+      MYSQL_USER: ${DB_USER:-afrijob}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-afrijob123}
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./backend/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+      interval: 10s
+    networks:
+      - afrijob-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Node.js Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: afrijob-backend
+    restart: always
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${BACKEND_PORT:-5000}
+      DB_HOST: mysql
+      DB_USER: ${DB_USER:-afrijob}
+      DB_PASSWORD: ${DB_PASSWORD:-afrijob123}
+      DB_NAME: ${DB_NAME:-bddiane_sp}
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key}
+      FILE_SIGNATURE_SECRET: ${FILE_SIGNATURE_SECRET:-your-file-secret-key}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "${BACKEND_PORT:-5000}:5000"
+    volumes:
+      - ./backend/uploads:/app/uploads
+      - ./backend/logs:/app/logs
+    networks:
+      - afrijob-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      timeout: 5s
+      retries: 5
+      interval: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Flutter Web Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: afrijob-frontend
+    restart: always
+    depends_on:
+      - backend
+    environment:
+      BACKEND_URL: ${BACKEND_URL:-http://backend:5000}
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    networks:
+      - afrijob-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      timeout: 5s
+      retries: 5
+      interval: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Nginx Reverse Proxy (optionnel)
+  nginx:
+    image: nginx:alpine
+    container_name: afrijob-nginx
+    restart: always
+    depends_on:
+      - backend
+      - frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - ./backend/uploads:/var/www/uploads:ro
+    networks:
+      - afrijob-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80"]
+      timeout: 5s
+      retries: 5
+      interval: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Redis Cache (optionnel)
+  redis:
+    image: redis:7-alpine
+    container_name: afrijob-redis
+    restart: always
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - afrijob-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      timeout: 3s
+      retries: 5
+      interval: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    profiles:
+      - with-cache  # Activer avec: docker-compose --profile with-cache up
+
+  # Backup Service (optionnel)
+  backup:
+    image: mysql:8.0
+    container_name: afrijob-backup
+    restart: daily
+    depends_on:
+      - mysql
+    environment:
+      MYSQL_PWD: ${DB_PASSWORD:-afrijob123}
+    volumes:
+      - ./backups:/backups
+    entrypoint: |
+      bash -c "
+      while true; do
+        echo 'Backup quotidien: '$$(date)
+        mysqldump -h mysql -u ${DB_USER:-afrijob} ${DB_NAME:-bddiane_sp} > /backups/$$(date +\%Y\%m\%d-\%H\%M\%S).sql
+        find /backups -name '*.sql' -mtime +30 -delete
+        sleep 86400
+      done
+      "
+    networks:
+      - afrijob-network
+    profiles:
+      - with-backup  # Activer avec: docker-compose --profile with-backup up
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  afrijob-network:
+    driver: bridge
