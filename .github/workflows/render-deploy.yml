@@ -39,11 +39,18 @@ jobs:
           fi
 
       - name: Trigger Render deploy
-        if: ${{ secrets.RENDER_API_KEY != '' && secrets.RENDER_SERVICE_ID != '' }}
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
         run: |
-          echo "Deploying to Render service: ${{ secrets.RENDER_SERVICE_ID }}"
-          curl -X POST "https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys" \
-            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+          if [ -z "${RENDER_API_KEY}" ] || [ -z "${RENDER_SERVICE_ID}" ]; then
+            echo "Skipping Render deploy because required secrets are missing or empty."
+            exit 0
+          fi
+
+          echo "Deploying to Render service: ${RENDER_SERVICE_ID}"
+          curl -X POST "https://api.render.com/v1/services/${RENDER_SERVICE_ID}/deploys" \
+            -H "Authorization: Bearer ${RENDER_API_KEY}" \
             -H "Content-Type: application/json" \
             -d '{"clearCache":true}' \
             -w "\nResponse status: %{http_code}\n"
