@@ -822,21 +822,22 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _handleAuth() async {
+    final buildContext = context;
     // Vérifier le formulaire Flutter
     if (!_formKey.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez corriger les erreurs du formulaire'), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(buildContext).showSnackBar(const SnackBar(content: Text('Veuillez corriger les erreurs du formulaire'), backgroundColor: Colors.red));
       return;
     }
 
     if (!isLogin && isCandidat) {
       if (_registerCvBytes == null || _registerCnibRectoBytes == null || _registerCnibVersoBytes == null) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez importer votre CV et les deux faces de votre CNIB'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(buildContext).showSnackBar(const SnackBar(content: Text('Veuillez importer votre CV et les deux faces de votre CNIB'), backgroundColor: Colors.red));
         return;
       }
 
       final ocrSuccess = await _processCnibRectoOcr(silent: true);
       if (!ocrSuccess) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vérifiez votre CNIB recto : OCR impossible ou incohérence détectée.'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(buildContext).showSnackBar(const SnackBar(content: Text('Vérifiez votre CNIB recto : OCR impossible ou incohérence détectée.'), backgroundColor: Colors.red));
         return;
       }
     }
@@ -844,7 +845,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
     var isLoadingDialogOpen = false;
     try {
       showDialog(
-        context: context,
+        context: buildContext,
         barrierDismissible: false,
         builder: (_) => const Center(child: CircularProgressIndicator(color: Colors.white)),
       );
@@ -857,7 +858,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
         );
 
         if (mounted && isLoadingDialogOpen) {
-          Navigator.pop(context);
+          Navigator.pop(buildContext);
           isLoadingDialogOpen = false;
         }
 
@@ -887,7 +888,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
 
           if (mounted) {
             Navigator.pushReplacement(
-              context,
+              buildContext,
               MaterialPageRoute(
                 builder: (context) => userType == 'entreprise' ? CompanyDashboard(initialData: userData) : CandidateDashboard(initialData: userData),
               ),
@@ -896,24 +897,27 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
         }
       } else {
         // INSCRIPTION
-        final extraData = isCandidat
-            ? {
-                'nom': _nomController.text,
-                'filiere': _filiereController.text,
-                'telephone': _telController.text,
-                'sexe': selectedSexe,
-                'age': int.tryParse(_ageController.text.split(' ')[0])?.toString() ?? '22',
-                'domicile': _domicileController.text,
-                'villeLieu': _domicileController.text,
-              }
-            : {
-                'nomSociete': _societeController.text,
-                'domaine': _domaineController.text,
-                'villeLieu': _lieuEntrepriseController.text,
-                'telephone': _telSocieteController.text,
-                'description': 'Entreprise partenaire',
-                'adresse': _lieuEntrepriseController.text
-              };
+        final Map<String, dynamic> extraData = {};
+        if (isCandidat) {
+          extraData.addAll({
+            'nom': _nomController.text,
+            'filiere': _filiereController.text,
+            'telephone': _telController.text,
+            'sexe': selectedSexe,
+            'age': int.tryParse(_ageController.text.split(' ')[0])?.toString() ?? '22',
+            'domicile': _domicileController.text,
+            'villeLieu': _domicileController.text,
+          });
+        } else {
+          extraData.addAll({
+            'nomSociete': _societeController.text,
+            'domaine': _domaineController.text,
+            'villeLieu': _lieuEntrepriseController.text,
+            'telephone': _telSocieteController.text,
+            'description': 'Entreprise partenaire',
+            'adresse': _lieuEntrepriseController.text,
+          });
+        }
 
         final registerResponse = await ApiService.register(
           email: isCandidat ? _emailController.text : _emailSocieteController.text,
@@ -954,7 +958,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
             }
           }
           if (mounted && isLoadingDialogOpen) {
-            Navigator.pop(context);
+            Navigator.pop(buildContext);
             isLoadingDialogOpen = false;
           }
           final userType = user['userType']?.toString() ?? 'candidat';
@@ -981,7 +985,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
 
           if (mounted) {
             Navigator.pushReplacement(
-              context,
+              buildContext,
               MaterialPageRoute(
                 builder: (context) => userType == 'entreprise' ? CompanyDashboard(initialData: userData) : ProfileConfirmationScreen(userData: userData),
               ),
@@ -990,7 +994,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
         } else {
           final String message = registerResponse['message']?.toString() ?? 'Erreur lors de l\'inscription';
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
+            ScaffoldMessenger.of(buildContext).showSnackBar(
               SnackBar(
                 content: Text(message),
                 backgroundColor: Colors.red,
@@ -1001,10 +1005,10 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
       }
     } catch (e) {
       if (mounted && isLoadingDialogOpen) {
-        Navigator.pop(context);
+        Navigator.pop(buildContext);
       }
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception:', '')), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(buildContext).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception:', '')), backgroundColor: Colors.red));
       }
     }
   }
