@@ -12,8 +12,12 @@ RUN flutter pub get
 # Copier tout le code
 COPY . .
 
+# Passer l'URL de l'API à la compilation Flutter
+ARG API_BASE_URL
+ENV API_BASE_URL=${API_BASE_URL}
+
 # Générer le build web en mode release
-RUN flutter build web --release
+RUN flutter build web --release --dart-define=API_BASE_URL=${API_BASE_URL}
 
 # ========================================
 # Production stage avec Nginx
@@ -23,7 +27,7 @@ FROM nginx:alpine
 COPY --from=builder /app/build/web /usr/share/nginx/html
 
 # Copier la configuration nginx personnalisée
-COPY <<EOF /etc/nginx/conf.d/default.conf
+RUN cat <<'EOF' > /etc/nginx/conf.d/default.conf
 server {
     listen 80;
     server_name _;

@@ -1,7 +1,5 @@
-/**
- * lib/services/profile_photo_service.dart
- * Service pour gérer les photos de profil
- */
+/// lib/services/profile_photo_service.dart
+/// Service pour gérer les photos de profil
 
 import 'dart:typed_data';
 import 'api_service.dart';
