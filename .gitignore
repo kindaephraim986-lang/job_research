@@ -1,5 +1,12 @@
 flutter/ephemeral/
 
+# Node modules
+**/node_modules/
+
+# Ignore local env file
+.env
+.env.*
+
 # Visual Studio user-specific files.
 *.suo
 *.user
