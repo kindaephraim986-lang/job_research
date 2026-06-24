@@ -1,5 +1,5 @@
 # Build stage
-FROM cirrusci/flutter:3.44.0 as builder
+FROM cirrusci/flutter:3.7.4 as builder
 
 WORKDIR /app
 
