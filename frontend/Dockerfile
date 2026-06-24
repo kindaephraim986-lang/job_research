@@ -1,14 +1,10 @@
 # Build stage
-FROM cirrusci/flutter:stable as builder
+FROM cirrusci/flutter:3.44.0 as builder
 
 WORKDIR /app
 
 # Copier les fichiers pubspec
 COPY pubspec*.yaml ./
-
-# Mettre à jour Flutter/Dart (assurer Dart >=3 si l'image n'est pas à jour)
-# Ceci force le canal stable et met à jour le SDK avant de récupérer les dépendances
-RUN flutter channel stable && flutter upgrade --force
 
 # Récupérer les dépendances
 RUN flutter pub get
