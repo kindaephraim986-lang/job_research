@@ -1,12 +1,12 @@
 services:
   - type: web
-    name: Job Research
+    name: job-research
     env: docker
     dockerfilePath: Dockerfile
     branch: main
+    autoDeploy: true
     plan: starter
     healthCheckPath: /api/health
-    autoDeployUrl: https://render.com/docs/deploy-button
     envVars:
       - key: NODE_ENV
         value: production
