@@ -17,8 +17,8 @@ RUN flutter build web --release --dart-define=API_BASE_URL=https://afrijob-backe
 FROM node:18-alpine AS runtime
 WORKDIR /app
 
-COPY --from=backend-builder /app/backend ./backend
-COPY --from=frontend-builder /app/frontend/build/web ./public
+COPY --from=backend-builder /app/backend /app/backend
+COPY --from=frontend-builder /app/frontend/build/web /app/public
 
 WORKDIR /app/backend
 ENV NODE_ENV=production
