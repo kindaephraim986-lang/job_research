@@ -1,9 +1,9 @@
 FROM node:18-alpine AS backend-builder
-WORKDIR /app
+WORKDIR /app/backend
 
-COPY backend/package*.json ./backend/
-RUN cd /app/backend && npm ci --omit=dev --ignore-scripts --no-audit --no-fund
-COPY backend ./backend
+COPY backend/package*.json ./
+RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund
+COPY backend/ ./
 
 FROM ghcr.io/cirruslabs/flutter:stable AS frontend-builder
 WORKDIR /app/frontend
